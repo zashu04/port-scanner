@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>NetScan — Network Port Scanner</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet"/>
+</head>
+<body>
+
+  <!-- ── Header ── -->
+  <header>
+    <div class="brand">
+      <span class="brand-icon">📡</span>
+      <div>
+        <span class="brand-name">NetScan</span>
+        <span class="brand-sub">Network Port Scanner</span>
+      </div>
+    </div>
+    <div class="header-right">
+      <span class="hbadge green">TCP</span>
+      <span class="hbadge">Multi-threaded</span>
+      <span class="hbadge">v1.0</span>
+    </div>
+  </header>
+
+  <!-- ── Legal Disclaimer ── -->
+  <div class="disclaimer-bar" id="disclaimer-bar">
+    <span class="disc-icon">⚖️</span>
+    <span class="disc-text">
+      <strong>Legal Notice:</strong> Only scan hosts you own or have explicit written permission to test.
+      Unauthorized port scanning may violate the Computer Fraud and Abuse Act (CFAA) and equivalent laws.
+    </span>
+    <button class="disc-close" id="disc-close" title="Dismiss">✕</button>
+  </div>
+
+  <main>
+
+    <!-- ── Scan Config Card ── -->
+    <section class="card" id="config-card">
+      <div class="card-label">TARGET &amp; CONFIGURATION</div>
+
+      <!-- Host input -->
+      <div class="field-group">
+        <label class="field-label">Hostname or IP Address</label>
+        <div class="host-input-wrap">
+          <span class="host-prefix mono">$</span>
+          <input
+            type="text"
+            id="host-input"
+            class="host-input mono"
+            placeholder="192.168.1.1  or  example.com"
+            autocomplete="off"
+            spellcheck="false"
+          />
+        </div>
+      </div>
+
+      <!-- Port preset selector -->
+      <div class="field-group">
+        <label class="field-label">Port Range</label>
+        <div class="preset-grid">
+          <button class="preset-btn active" data-preset="common">
+            <span class="preset-name">Common</span>
+            <span class="preset-count">22 ports</span>
+          </button>
+          <button class="preset-btn" data-preset="web">
+            <span class="preset-name">Web</span>
+            <span class="preset-count">19 ports</span>
+          </button>
+          <button class="preset-btn" data-preset="top100">
+            <span class="preset-name">Top 100</span>
+            <span class="preset-count">97 ports</span>
+          </button>
+          <button class="preset-btn" data-preset="custom">
+            <span class="preset-name">Custom</span>
+            <span class="preset-count">define below</span>
+          </button>
+        </div>
+        <div class="custom-ports-wrap" id="custom-wrap" style="display:none">
+          <input
+            type="text"
+            id="custom-ports"
+            class="custom-input mono"
+            placeholder="e.g.  22,80,443  or  1-1024  or  22,80,1000-2000"
+          />
+        </div>
+      </div>
+
+      <!-- Timeout -->
+      <div class="field-group timeout-group">
+        <label class="field-label">
+          Timeout per port: <strong id="timeout-display" class="accent">0.5s</strong>
+        </label>
+        <input type="range" id="timeout-slider" min="2" max="30" value="5" step="1"/>
+        <span class="timeout-hint">Increase for firewalled / slow hosts</span>
+      </div>
+
+      <!-- Consent + Scan button -->
+      <div class="scan-footer">
+        <label class="consent-label">
+          <input type="checkbox" id="consent-check"/>
+          <span class="consent-track"></span>
+          I have authorization to scan this host
+        </label>
+        <button class="btn-scan" id="scan-btn" disabled>
+          <span id="scan-btn-text">⚡ Start Scan</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- ── Error Banner ── -->
+    <div class="error-banner" id="error-banner" style="display:none"></div>
+
+    <!-- ── Results ── -->
+    <div id="results" style="display:none">
+
+      <!-- Summary -->
+      <section class="summary-bar" id="summary-bar">
+        <div class="summary-item">
+          <span class="sum-label">HOST</span>
+          <span class="sum-val mono" id="sum-host">—</span>
+        </div>
+        <div class="summary-item">
+          <span class="sum-label">IP</span>
+          <span class="sum-val mono" id="sum-ip">—</span>
+        </div>
+        <div class="summary-item">
+          <span class="sum-label">SCANNED</span>
+          <span class="sum-val mono" id="sum-scanned">—</span>
+        </div>
+        <div class="summary-item">
+          <span class="sum-label">OPEN</span>
+          <span class="sum-val mono open" id="sum-open">—</span>
+        </div>
+        <div class="summary-item">
+          <span class="sum-label">FILTERED</span>
+          <span class="sum-val mono filtered" id="sum-filtered">—</span>
+        </div>
+        <div class="summary-item">
+          <span class="sum-label">DURATION</span>
+          <span class="sum-val mono" id="sum-duration">—</span>
+        </div>
+        <div class="summary-item">
+          <span class="sum-label">TOP RISK</span>
+          <span class="risk-badge" id="sum-risk">—</span>
+        </div>
+      </section>
+
+      <!-- Filter tabs -->
+      <div class="filter-tabs">
+        <button class="filter-tab active" data-filter="all">All</button>
+        <button class="filter-tab" data-filter="open">Open only</button>
+        <button class="filter-tab" data-filter="filtered">Filtered only</button>
+      </div>
+
+      <!-- Results table -->
+      <section class="card table-card">
+        <div class="table-wrap">
+          <table class="results-table" id="results-table">
+            <thead>
+              <tr>
+                <th>PORT</th>
+                <th>PROTO</th>
+                <th>STATUS</th>
+                <th>SERVICE</th>
+                <th>RISK</th>
+                <th>DESCRIPTION</th>
+              </tr>
+            </thead>
+            <tbody id="results-tbody"></tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+    <!-- ── Scan History ── -->
+    <section class="card history-card">
+      <div class="history-header">
+        <div class="card-label">SCAN HISTORY</div>
+        <button class="btn-clear-hist" id="clear-hist-btn">Clear</button>
+      </div>
+      <div id="history-container">
+        <div class="no-history">No scans yet this session.</div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer>
+    <p>NetScan &nbsp;·&nbsp; Built with Python &amp; Flask &nbsp;·&nbsp; For authorized use only</p>
+  </footer>
+
+  <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>
